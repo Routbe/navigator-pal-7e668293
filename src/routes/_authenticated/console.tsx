@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Webhook,
+  BookOpen,
 } from "lucide-react";
 import { RoutLogo } from "@/components/RoutLogo";
 import { LanguageToggle } from "@/components/LanguageToggle";
@@ -34,6 +35,7 @@ const GLOBAL_NAV = [
   { to: "/console/api", label: "API & Webhooks", icon: Webhook, exact: false },
   { to: "/console/connectors", label: "AI Connectors (MCP)", icon: Bot, exact: false },
   { to: "/console/billing", label: "Billing", icon: ReceiptText, exact: false },
+  { to: "/developers", label: "Documentatie", icon: BookOpen, exact: false },
 ] as const;
 
 const APP_NAV = [
