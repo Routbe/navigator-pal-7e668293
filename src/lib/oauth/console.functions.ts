@@ -72,6 +72,7 @@ export const saveOAuthClient = createServerFn({ method: "POST" })
     const { createClient, updateClient } = await import("./provider.server");
     const input = {
       name: data.name,
+      description: data.description ?? null,
       logoUrl: data.logoUrl ?? null,
       homepageUrl: data.homepageUrl ?? null,
       privacyUrl: data.privacyUrl ?? null,
@@ -85,6 +86,10 @@ export const saveOAuthClient = createServerFn({ method: "POST" })
       if (data.id) {
         return { client: await updateClient(context.userId, data.id, input), clientSecret: null };
       }
+      const { hitRateLimit } = await import("@/lib/rate-limit-db.server");
+      const { RATE_RULES } = await import("@/lib/rate-limit-rules");
+      const limit = await hitRateLimit("app-create", context.userId, RATE_RULES.appCreate);
+      if (!limit.ok) throw new Error("Je hebt het maximum aantal nieuwe apps per uur bereikt. Probeer later opnieuw.");
       return createClient(context.userId, input);
     });
   });

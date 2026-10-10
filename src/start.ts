@@ -1,6 +1,7 @@
 import { createStart, createCsrfMiddleware, createMiddleware } from "@tanstack/react-start";
 
 import { renderErrorPage } from "./lib/error-page";
+import { securityHeaders, sessionCookieProblems } from "./lib/security-headers";
 
 const errorMiddleware = createMiddleware().server(async ({ next }) => {
   try {
@@ -25,23 +26,31 @@ const csrfMiddleware = createCsrfMiddleware({
 });
 
 /**
- * Baseline security headers on every response.
+ * Security headers on every response (rules in lib/security-headers.ts).
  *
- * Deliberately no X-Frame-Options: the Lovable editor renders the app in an
- * iframe, and framing protection for the published site belongs in the hosting
- * layer. No Access-Control-Allow-Origin either — the database gateway and every
- * other server function are same-origin only, so no browser outside our own
- * domains can call them at all.
+ * Framing is limited with CSP frame-ancestors (rout.be + the Lovable editor)
+ * instead of X-Frame-Options, which cannot allow the editor. CORS is only ever
+ * allowed on the public OIDC endpoints; anything else loses the header.
+ * Session cookies without HttpOnly/Secure/SameSite are reported in the log.
  */
-const securityHeadersMiddleware = createMiddleware().server(async ({ next }) => {
+const securityHeadersMiddleware = createMiddleware().server(async ({ request, next }) => {
   const result = await next();
   const response = (result as { response?: Response }).response;
   const headers = response?.headers;
   if (headers) {
-    headers.set("X-Content-Type-Options", "nosniff");
-    headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-    headers.set("X-DNS-Prefetch-Control", "off");
-    headers.set("Permissions-Policy", "geolocation=(), microphone=(), payment=()");
+    const url = new URL(request.url);
+    const https = url.protocol === "https:" || request.headers.get("x-forwarded-proto") === "https";
+    for (const [k, v] of Object.entries(securityHeaders(https))) {
+      if (!headers.has(k)) headers.set(k, v);
+    }
+    // Server functions are same-origin only; never let them answer cross-origin.
+    if (url.pathname.startsWith("/_serverFn")) headers.delete("access-control-allow-origin");
+    if (https) {
+      for (const cookie of headers.getSetCookie?.() ?? []) {
+        const problems = sessionCookieProblems(cookie);
+        if (problems.length) console.warn(`[security] session cookie missing ${problems.join(", ")}`);
+      }
+    }
   }
   return result;
 });

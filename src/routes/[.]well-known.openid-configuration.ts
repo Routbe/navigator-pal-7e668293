@@ -20,9 +20,9 @@ export const Route = createFileRoute("/.well-known/openid-configuration")({
             id_token_signing_alg_values_supported: ["ES256"],
             scopes_supported: [...SUPPORTED_SCOPES],
             code_challenge_methods_supported: ["S256"],
-            token_endpoint_auth_methods_supported: ["client_secret_post", "none"],
+            token_endpoint_auth_methods_supported: ["client_secret_post", "client_secret_basic", "none"],
           },
-          { headers: { "cache-control": "public, max-age=300" } },
+          { headers: { "cache-control": "public, max-age=300", "access-control-allow-origin": "*" } },
         );
       },
     },

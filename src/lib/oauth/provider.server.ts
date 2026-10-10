@@ -8,6 +8,17 @@ import { runSchemaEnsure } from "@/lib/db/schema-ensure.server";
  * asymmetrisch (ES256); alleen de publieke helft verlaat de server via JWKS.
  */
 import { sql } from "@/lib/neon";
+import { generateClientSecret, hashClientSecret, verifyClientSecret } from "./client-secret";
+
+/** Pepper for client-secret hashes: dedicated env var, else the auth secret. */
+async function secretPepper(): Promise<string> {
+  const own = process.env["OAUTH_CLIENT_SECRET_PEPPER"];
+  if (own && own.length >= 32) return own;
+  const { resolveAuthSecret } = await import("@/lib/better-auth.server");
+  const resolved = resolveAuthSecret();
+  if (!resolved) throw new OAuthError("server_error", "Geheimen kunnen niet veilig bewaard worden: auth-secret ontbreekt.");
+  return resolved.secret;
+}
 import { canonicalAppUrl } from "@/lib/app-url";
 
 export const SUPPORTED_SCOPES = ["openid", "profile", "email", "linked_accounts"] as const;
@@ -20,6 +31,7 @@ export type OAuthClient = {
   id: string;
   clientId: string;
   name: string;
+  description: string | null;
   logoUrl: string | null;
   homepageUrl: string | null;
   privacyUrl: string | null;
@@ -175,6 +187,8 @@ export async function ensureTables(): Promise<void> {
   await sql`alter table public.oauth_clients add column if not exists access_token_ttl integer not null default 3600`;
   await sql`alter table public.oauth_clients add column if not exists allowed_ips text[] not null default '{}'`;
   await sql`alter table public.oauth_clients add column if not exists account_discovery_enabled boolean not null default false`;
+  // Migratie 62 — beschrijving (wizard stap 1).
+  await sql`alter table public.oauth_clients add column if not exists description text`;
   await sql`create table if not exists public.oauth_client_test_users (
     id uuid primary key default gen_random_uuid(),
     client_id text not null,
@@ -203,6 +217,7 @@ function toClient(row: Row): OAuthClient {
     id: String(row["id"]),
     clientId: String(row["client_id"]),
     name: String(row["name"]),
+    description: (row["description"] as string | null) ?? null,
     logoUrl: (row["logo_url"] as string | null) ?? null,
     homepageUrl: (row["homepage_url"] as string | null) ?? null,
     privacyUrl: (row["privacy_url"] as string | null) ?? null,
@@ -243,6 +258,7 @@ export async function getClientByClientId(clientId: string): Promise<OAuthClient
 
 export type ClientInput = {
   name: string;
+  description?: string | null;
   logoUrl?: string | null;
   homepageUrl?: string | null;
   privacyUrl?: string | null;
@@ -271,8 +287,8 @@ export async function createClient(
   await ensureTables();
   const { name, uris, scopes } = sanitize(input);
   const clientId = `rout_${randomToken(16)}`;
-  const clientSecret = `routsec_${randomToken(32)}`;
-  const secretHash = await sha256Base64Url(clientSecret);
+  const clientSecret = generateClientSecret();
+  const secretHash = await hashClientSecret(clientSecret, await secretPepper());
   const rows = (await sql`insert into public.oauth_clients
     (owner_user_id, client_id, secret_hash, name, logo_url, homepage_url, privacy_url, terms_url, redirect_uris, scopes)
     values (${ownerUserId}, ${clientId}, ${secretHash}, ${name}, ${input.logoUrl ?? null},
@@ -280,6 +296,11 @@ export async function createClient(
             ${uris}, ${scopes})
     returning *`) as Row[];
   const created = rows[0]!;
+  if (input.description) {
+    await sql`update public.oauth_clients set description = ${input.description.trim().slice(0, 500)}
+      where id = ${created["id"] as string}`;
+    created["description"] = input.description.trim().slice(0, 500);
+  }
   if (input.flowPreference || input.richIdentityEnabled !== undefined) {
     const updated = (await sql`update public.oauth_clients set
         flow_preference = ${input.flowPreference === "strict" ? "strict" : "seamless"},
@@ -300,7 +321,8 @@ export async function updateClient(
   const rows = (await sql`update public.oauth_clients set
       name = ${name}, logo_url = ${input.logoUrl ?? null},
       homepage_url = ${input.homepageUrl ?? null}, privacy_url = ${input.privacyUrl ?? null},
-      terms_url = ${input.termsUrl ?? null}, redirect_uris = ${uris}, scopes = ${scopes},
+      terms_url = ${input.termsUrl ?? null},
+      description = coalesce(${input.description ?? null}, description), redirect_uris = ${uris}, scopes = ${scopes},
       flow_preference = coalesce(${input.flowPreference ?? null}, flow_preference),
       rich_identity_enabled = coalesce(${input.richIdentityEnabled ?? null}::boolean, rich_identity_enabled),
       updated_at = now()
@@ -522,8 +544,8 @@ export async function deleteClient(ownerUserId: string, id: string): Promise<voi
 
 export async function rotateClientSecret(ownerUserId: string, id: string): Promise<string> {
   await ensureTables();
-  const clientSecret = `routsec_${randomToken(32)}`;
-  const secretHash = await sha256Base64Url(clientSecret);
+  const clientSecret = generateClientSecret();
+  const secretHash = await hashClientSecret(clientSecret, await secretPepper());
   const rows = (await sql`update public.oauth_clients
     set secret_hash = ${secretHash}, secret_rotated_at = now(), updated_at = now()
     where id = ${id} and owner_user_id = ${ownerUserId} returning id`) as Row[];
@@ -650,8 +672,10 @@ export async function exchangeAuthorizationCode(input: {
   const secretHash = (stored[0]?.["secret_hash"] as string | null) ?? null;
   let secretVerified = false;
   if (secretHash) {
-    const provided = input.clientSecret ? await sha256Base64Url(input.clientSecret) : "";
-    if (provided !== secretHash) throw new OAuthError("invalid_client", "Clientsecret klopt niet.");
+    const ok = input.clientSecret
+      ? await verifyClientSecret(input.clientSecret, secretHash, await secretPepper())
+      : false;
+    if (!ok) throw new OAuthError("invalid_client", "Clientsecret klopt niet.");
     secretVerified = true;
   }
 

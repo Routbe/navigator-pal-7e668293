@@ -18,6 +18,6 @@ export const Route = createFileRoute("/api")({
     ],
   }),
   beforeLoad: () => {
-    throw redirect({ to: "/console" });
+    throw redirect({ to: "/developers", statusCode: 301 });
   },
 });

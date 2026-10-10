@@ -31,12 +31,14 @@ export const redirectUriSchema = z
   .refine((v) => {
     try {
       const u = new URL(v);
-      if (u.hash) return false;
+      if (u.hash || v.includes("*")) return false;
       return u.protocol === "https:" || (u.protocol === "http:" && isLocal(u.hostname));
     } catch {
       return false;
     }
-  }, "Redirect-URI's moeten https gebruiken (http enkel voor localhost) en mogen geen #fragment hebben.");
+  }, "Redirect-URI's moeten https gebruiken (http enkel voor localhost) en mogen geen #fragment of * bevatten.");
+
+export const MAX_REDIRECT_URIS = 10;
 
 export const scopeEnum = z.enum(["openid", "profile", "email", "linked_accounts"]);
 
@@ -44,11 +46,12 @@ export const clientSchema = z
   .object({
     id: z.string().uuid().optional(),
     name: z.string().trim().min(2).max(120),
+    description: z.string().trim().max(500).nullable().optional(),
     logoUrl: optionalHttpsUrl,
     homepageUrl: optionalHttpsUrl,
     privacyUrl: optionalHttpsUrl,
     termsUrl: optionalHttpsUrl,
-    redirectUris: z.array(redirectUriSchema).max(20),
+    redirectUris: z.array(redirectUriSchema).max(MAX_REDIRECT_URIS),
     scopes: z.array(scopeEnum).max(4),
     flowPreference: z.enum(["seamless", "strict"]).optional(),
     richIdentityEnabled: z.boolean().optional(),
