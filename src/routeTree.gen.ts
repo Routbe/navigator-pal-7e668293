@@ -19,6 +19,7 @@ import { Route as BatchRouteImport } from './routes/batch'
 import { Route as CardRouteImport } from './routes/card'
 import { Route as ClaimRouteImport } from './routes/claim'
 import { Route as ContactRouteImport } from './routes/contact'
+import { Route as DevelopersRouteImport } from './routes/developers'
 import { Route as EmailTemplatesRouteImport } from './routes/email-templates'
 import { Route as ExploreRouteImport } from './routes/explore'
 import { Route as GiftRouteImport } from './routes/gift'
@@ -184,6 +185,11 @@ const ClaimRoute = ClaimRouteImport.update({
 const ContactRoute = ContactRouteImport.update({
   id: '/contact',
   path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DevelopersRoute = DevelopersRouteImport.update({
+  id: '/developers',
+  path: '/developers',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EmailTemplatesRoute = EmailTemplatesRouteImport.update({
@@ -824,6 +830,7 @@ export interface FileRoutesByFullPath {
   '/card': typeof CardRoute
   '/claim': typeof ClaimRoute
   '/contact': typeof ContactRoute
+  '/developers': typeof DevelopersRoute
   '/email-templates': typeof EmailTemplatesRoute
   '/explore': typeof ExploreRoute
   '/gift': typeof GiftRoute
@@ -951,6 +958,7 @@ export interface FileRoutesByTo {
   '/card': typeof CardRoute
   '/claim': typeof ClaimRoute
   '/contact': typeof ContactRoute
+  '/developers': typeof DevelopersRoute
   '/email-templates': typeof EmailTemplatesRoute
   '/explore': typeof ExploreRoute
   '/gift': typeof GiftRoute
@@ -1078,6 +1086,7 @@ export interface FileRoutesById {
   '/card': typeof CardRoute
   '/claim': typeof ClaimRoute
   '/contact': typeof ContactRoute
+  '/developers': typeof DevelopersRoute
   '/email-templates': typeof EmailTemplatesRoute
   '/explore': typeof ExploreRoute
   '/gift': typeof GiftRoute
@@ -1208,6 +1217,7 @@ export interface FileRouteTypes {
     | '/card'
     | '/claim'
     | '/contact'
+    | '/developers'
     | '/email-templates'
     | '/explore'
     | '/gift'
@@ -1335,6 +1345,7 @@ export interface FileRouteTypes {
     | '/card'
     | '/claim'
     | '/contact'
+    | '/developers'
     | '/email-templates'
     | '/explore'
     | '/gift'
@@ -1461,6 +1472,7 @@ export interface FileRouteTypes {
     | '/card'
     | '/claim'
     | '/contact'
+    | '/developers'
     | '/email-templates'
     | '/explore'
     | '/gift'
@@ -1591,6 +1603,7 @@ export interface RootRouteChildren {
   CardRoute: typeof CardRoute
   ClaimRoute: typeof ClaimRoute
   ContactRoute: typeof ContactRoute
+  DevelopersRoute: typeof DevelopersRoute
   EmailTemplatesRoute: typeof EmailTemplatesRoute
   ExploreRoute: typeof ExploreRoute
   GiftRoute: typeof GiftRoute
@@ -1731,6 +1744,13 @@ declare module '@tanstack/react-router' {
       path: '/contact'
       fullPath: '/contact'
       preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/developers': {
+      id: '/developers'
+      path: '/developers'
+      fullPath: '/developers'
+      preLoaderRoute: typeof DevelopersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/email-templates': {
@@ -2778,6 +2798,7 @@ const rootRouteChildren: RootRouteChildren = {
   CardRoute: CardRoute,
   ClaimRoute: ClaimRoute,
   ContactRoute: ContactRoute,
+  DevelopersRoute: DevelopersRoute,
   EmailTemplatesRoute: EmailTemplatesRoute,
   ExploreRoute: ExploreRoute,
   GiftRoute: GiftRoute,

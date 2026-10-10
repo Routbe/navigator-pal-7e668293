@@ -35,3 +35,6 @@
 - Studio autosaves private drafts and publishes with revision checks; public reads never use drafts. Why: incomplete edits stay private.
 - Phone verification uses a provider-neutral contract led by the Android gateway; chat channels count only after server confirmation. Why: sovereignty without unproven claims.
 - Layered design lives as one JSON string in `display_prefs.designLayers`, normalized by `normalizeDesignLayers` server-side and on render. Why: display_prefs is flat; client input stays untrusted.
+- SMS goes only through the provider-neutral `src/lib/phone/sms-provider.server.ts` (Android gateway default; Twilio/Brevo optional); phone numbers live encrypted in `user_phone_numbers` (db/63), never in `profiles`. Why: profiles is publicly readable through the gateway.
+- Rate limits are counted in Neon (`rate_limits`, db/64) via `hitRateLimit`, failing open on database errors. Why: limits must hold across server instances without locking everyone out.
+- New OAuth client secrets are stored as `v2$` peppered SHA-256 (`client-secret.ts`), legacy plain hashes stay valid until rotated. Why: no forced re-issue for existing apps.
