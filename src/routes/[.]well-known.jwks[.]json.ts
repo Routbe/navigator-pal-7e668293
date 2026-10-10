@@ -7,7 +7,7 @@ export const Route = createFileRoute("/.well-known/jwks.json")({
       GET: async () => {
         const { publicJwks } = await import("@/lib/oauth/provider.server");
         return Response.json(await publicJwks(), {
-          headers: { "cache-control": "public, max-age=300" },
+          headers: { "cache-control": "public, max-age=300", "access-control-allow-origin": "*" },
         });
       },
     },

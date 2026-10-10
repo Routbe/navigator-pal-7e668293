@@ -32,6 +32,7 @@ const PLATFORM = [
 const INFRASTRUCTURE = [
   { to: "/domains", label: "Custom domains" },
   { to: "/console", label: "Developer Console" },
+  { to: "/developers", label: "Developer docs" },
   { to: "/self-hosting", label: "Self-hosting guide" },
   { href: GITHUB_REPO, label: "GitHub repository" },
 ];
