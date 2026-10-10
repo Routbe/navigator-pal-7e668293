@@ -21,6 +21,11 @@ export const Route = createFileRoute("/api_/public/oauth/token")({
         const fail = (code: string, description: string, status = 400) =>
           Response.json({ error: code, error_description: description }, { status, headers: cors });
 
+        const { hitRateLimit, clientIp } = await import("@/lib/rate-limit-db.server");
+        const { RATE_RULES, tooManyRequests } = await import("@/lib/rate-limit-rules");
+        const limit = await hitRateLimit("oauth-token", clientIp(request), RATE_RULES.oauthToken);
+        if (!limit.ok) return tooManyRequests(limit.retryAfter, cors);
+
         let form: URLSearchParams;
         try {
           const contentType = request.headers.get("content-type") ?? "";

@@ -125,6 +125,10 @@ export async function handleAuthRequest({ request }: { request: Request }) {
     // Self-hosted ALTCHA proof required before Better Auth runs: no user is
     // created and no mail is sent without it. Social/OAuth stay open.
     if (request.method === "POST" && ALTCHA_PATHS.has(relativePath)) {
+      const { hitRateLimit, clientIp } = await import("@/lib/rate-limit-db.server");
+      const { RATE_RULES, tooManyRequests } = await import("@/lib/rate-limit-rules");
+      const limit = await hitRateLimit("auth", `${clientIp(request)}:${relativePath}`, RATE_RULES.authAttempt);
+      if (!limit.ok) return tooManyRequests(limit.retryAfter);
       const refusal = await checkAltcha(request);
       if (refusal) return refusal;
     }
