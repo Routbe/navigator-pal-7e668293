@@ -1,0 +1,10 @@
+[
+  {"capability":"application code (TanStack Start, ~100 routes)","source":"github:Routbe/navigator-pal-2ee81f03","outcome":"copied into project, build OK, homepage renders","status":"verified","next_action":"none"},
+  {"capability":"database schema (Neon Postgres, db/*.sql migrations)","source":"repo db/ folder","outcome":"preserved as external Neon provider per source architecture (least-privilege rout_app + owner MIGRATION_URL)","status":"pending","next_action":"user provides DATABASE_URL and MIGRATION_URL as secrets; run bun scripts/migrate.ts"},
+  {"capability":"database records","source":"none attached","outcome":"no record export in repo","status":"pending","next_action":"request CSV/JSON exports of tables and users from Neon dashboard"},
+  {"capability":"auth (Better Auth: passkeys, OAuth, magic links, OIDC provider)","source":"repo src/lib/better-auth.server.ts","outcome":"code preserved; needs provider keys and auth secret","status":"pending","next_action":"request BETTER_AUTH secret + OAuth provider keys via secret form before verification"},
+  {"capability":"file storage (Scaleway S3)","source":"repo src/lib/storage/s3.server.ts","outcome":"preserved as external provider","status":"pending","next_action":"request Scaleway credentials via secret form"},
+  {"capability":"payments (Stripe + creator PSP BYOK)","source":"repo Stripe routes/webhooks","outcome":"preserved; PSP_ENCRYPTION_KEY documented in ENVIRONMENT.md","status":"pending","next_action":"request Stripe keys + PSP_ENCRYPTION_KEY via secret form"},
+  {"capability":"public endpoints, cron, webhooks (api_.public.*)","source":"repo src/routes","outcome":"code preserved","status":"pending","next_action":"verify after secrets are configured"},
+  {"capability":"secrets","source":"ENVIRONMENT.md / .env.example","outcome":"names inventoried, no values in repo","status":"pending","next_action":"collect via Lovable secret form at verification time"}
+]
